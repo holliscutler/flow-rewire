@@ -1,0 +1,8 @@
+{
+  "commit": "0cb5516902ea31f241791b80de2aec7e7f6747e5",
+  "date": "2026-11-14",
+  "method": "gradual pruning from dense (src/flow_rewire/pruning.py), PruneConfig defaults: interval 250, stop 0.75, gamma 0.5, cubic schedule; scores flow and magnitude",
+  "protocol": "identical to results/baseline: LR selected on seed 0 from {1e-3, 3e-3, 1e-2} by final accuracy, then seeds 1-4 at the selected LR; final edges matched per seed to the random baseline",
+  "stage1": "python -m flow_rewire.mnist1d_train --hidden 2048 --masks flow_prune magnitude_prune --sparsity 0.9375 --seeds 0 --lrs 1e-3 3e-3 1e-2 --output results/prune/lr_select.jsonl",
+  "stage2": "per method: --seeds 1 2 3 4 --lrs <selected> --output results/prune/mnist1d.jsonl (selected LR records from stage 1 copied in as seed 0)"
+}
