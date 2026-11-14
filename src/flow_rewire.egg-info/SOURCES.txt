@@ -4,6 +4,9 @@ src/flow_rewire/__init__.py
 src/flow_rewire/evaluate.py
 src/flow_rewire/flow.py
 src/flow_rewire/masks.py
+src/flow_rewire/mnist1d_model.py
+src/flow_rewire/mnist1d_train.py
+src/flow_rewire/summarize.py
 src/flow_rewire/sweep.py
 src/flow_rewire/train_masked.py
 src/flow_rewire.egg-info/PKG-INFO

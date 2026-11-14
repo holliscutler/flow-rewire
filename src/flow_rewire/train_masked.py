@@ -8,6 +8,7 @@ gradient, matching the static-mask protocol of "Less is More" (Unconventional AI
 Example:
     uv run python -m flow_rewire.train_masked --mask results/masks/flow_s0.9.pt \
         --n-oscillators 1024 --lr 2.683e-3 --epochs 1 --checkpoint-dir results/raw/run
+
 """
 
 from __future__ import annotations
@@ -48,7 +49,7 @@ def attach_mask(model: nn.Module, mask: Tensor) -> None:
 def main() -> None:
     """Parse ``--mask``, forward every other flag to Un-0's training CLI."""
     pre = argparse.ArgumentParser(add_help=False)
-    pre.add_argument("--mask", type=Path, default=None, help="Saved bool (n, n) mask; omit = dense.")
+    pre.add_argument("--mask", type=Path, default=None, help="Bool (n, n) mask; omit = dense.")
     ours, rest = pre.parse_known_args()
 
     if ours.mask is not None:

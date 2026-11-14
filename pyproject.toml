@@ -9,6 +9,7 @@ dependencies = [
     "torchvision>=0.26.0",
     "numpy>=1.24.0",
     "mnist1d>=0.0.2.post1",
+    "nvidia-ml-py>=13.615.71",
 ]
 
 [dependency-groups]

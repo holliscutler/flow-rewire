@@ -37,12 +37,12 @@ def magnitude_score(K: Tensor) -> Tensor:
 
 
 def random_mask(n: int, sparsity: float, *, generator: torch.Generator | None = None) -> Tensor:
-    """Static random mask: each coupling is deleted independently with probability ``s``."""
+    """Build a static random mask; each coupling is deleted with probability ``s``."""
     return torch.rand(n, n, generator=generator) >= sparsity
 
 
 def modular_mask(group_sizes: list[int], num_modules: int) -> Tensor:
-    """Static modular mask: all-to-all within modules, no coupling between modules.
+    """Build a static modular mask: all-to-all within modules, none between.
 
     Each group of oscillators (e.g. inputs, hidden, readout) is dealt round-robin across
     modules, so every module receives an equal share of each group. This mirrors the

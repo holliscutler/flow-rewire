@@ -28,6 +28,12 @@ from torch import Tensor, nn
 from un0.common import make_scheduler
 from un0.decoupled_adamw import DecoupledAdamW
 
+from flow_rewire.energy import (
+    GpuEnergyMeter,
+    coupling_ops_per_inference,
+    gpu_info,
+    measure_energy_per_call,
+)
 from flow_rewire.masks import modular_mask, random_mask
 from flow_rewire.mnist1d_model import N_IN, N_OUT, KuramotoClassifier
 
@@ -87,24 +93,40 @@ def train_one(*, n_hidden: int, mask: Tensor | None, seed: int, lr: float, devic
 
     curve = []
     start = time.perf_counter()
-    for step in range(1, TOTAL_STEPS + 1):
-        idx = torch.randint(0, x.shape[0], (BATCH_SIZE,), device=device, generator=gen)
-        loss = loss_fn(model(x[idx], gen), y[idx])
-        opt.zero_grad(set_to_none=True)
-        loss.backward()
-        nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP_NORM)
-        opt.step()
-        sched.step()
-        if step % EVAL_EVERY == 0:
-            curve.append(accuracy(model, x_test, y_test))
+    with GpuEnergyMeter() as train_meter:  # whole run, including periodic evaluation
+        for step in range(1, TOTAL_STEPS + 1):
+            idx = torch.randint(0, x.shape[0], (BATCH_SIZE,), device=device, generator=gen)
+            loss = loss_fn(model(x[idx], gen), y[idx])
+            opt.zero_grad(set_to_none=True)
+            loss.backward()
+            nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP_NORM)
+            opt.step()
+            sched.step()
+            if step % EVAL_EVERY == 0:
+                curve.append(accuracy(model, x_test, y_test))
+    seconds = time.perf_counter() - start
     return {
         "acc_final": curve[-1],
         "acc_best": max(curve),
         "train_acc": accuracy(model, x, y),
         "n_oscillators": model.n,
         "edges": model.num_edges,
-        "seconds": round(time.perf_counter() - start, 1),
+        "coupling_ops_per_inference": coupling_ops_per_inference(model.num_edges, model.num_steps),
+        "train_energy_j": train_meter.joules,
+        "infer_energy_j_per_sample": inference_energy_per_sample(model, x_test),
+        "seconds": round(seconds, 1),
+        **gpu_info(),
     }
+
+
+@torch.no_grad()
+def inference_energy_per_sample(model: KuramotoClassifier, x: Tensor) -> float | None:
+    """Measured GPU energy (J) per test sample, averaged over >= 2 s of full passes."""
+    model.eval()
+    gen = torch.Generator(device=x.device)
+    joules = measure_energy_per_call(lambda: model(x, gen.manual_seed(0)))
+    model.train()
+    return None if joules is None else joules / x.shape[0]
 
 
 def main() -> None:
