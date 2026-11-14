@@ -1,0 +1,12 @@
+{
+  "commit": "565993895857882e531bdb532cc66b4eb69ee3b7",
+  "date": "2026-11-13",
+  "protocol": "docs/mnist1d_spec.md; LR selected on seed 0 (results/mnist1d_dense_trend.jsonl, results/mnist1d_sparse_check.jsonl), seeds 0-4 at the selected LR",
+  "selected_lr": {"dense_H8": 0.01, "dense_H2048": 0.001, "random_s0.9375_H2048": 0.01, "modular_Z16_H2048": 0.01},
+  "energy": "src/flow_rewire/energy.py (NVML power integration, 50 ms) + coupling ops proxy",
+  "commands": [
+    "python -m flow_rewire.mnist1d_train --hidden 8 --masks dense --seeds 0 1 2 3 4 --lrs 1e-2 --output results/baseline/mnist1d.jsonl",
+    "python -m flow_rewire.mnist1d_train --hidden 2048 --masks dense --seeds 0 1 2 3 4 --lrs 1e-3 --output results/baseline/mnist1d.jsonl",
+    "python -m flow_rewire.mnist1d_train --hidden 2048 --masks random modular --sparsity 0.9375 --modules 16 --seeds 0 1 2 3 4 --lrs 1e-2 --output results/baseline/mnist1d.jsonl"
+  ]
+}

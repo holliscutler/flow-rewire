@@ -36,6 +36,7 @@ from flow_rewire.energy import (
 )
 from flow_rewire.masks import modular_mask, random_mask
 from flow_rewire.mnist1d_model import N_IN, N_OUT, KuramotoClassifier
+from flow_rewire.physarum import PhysarumConfig, PhysarumRewirer
 
 BATCH_SIZE = 100  # MNIST1D reference
 TOTAL_STEPS = 8000  # MNIST1D reference
@@ -64,7 +65,7 @@ def build_mask(kind: str, n_hidden: int, level: float, seed: int) -> Tensor | No
     n = N_IN + n_hidden + N_OUT
     if kind == "dense":
         return None
-    if kind == "random":
+    if kind in ("random", "flow"):  # flow starts from the identical random mask
         return random_mask(n, level, generator=torch.Generator().manual_seed(10_000 + seed))
     if kind == "modular":
         return modular_mask([N_IN, n_hidden, N_OUT], int(level))
@@ -81,8 +82,20 @@ def accuracy(model: KuramotoClassifier, x: Tensor, y: Tensor) -> float:
     return acc
 
 
-def train_one(*, n_hidden: int, mask: Tensor | None, seed: int, lr: float, device: str) -> dict:
-    """Train one classifier and return its accuracy curve summary."""
+def train_one(
+    *,
+    n_hidden: int,
+    mask: Tensor | None,
+    seed: int,
+    lr: float,
+    device: str,
+    physarum: PhysarumConfig | None = None,
+) -> dict:
+    """Train one classifier and return its accuracy curve summary.
+
+    With ``physarum`` set, the mask is rewired by flow during training (see physarum.py);
+    otherwise the mask is static and the loop is identical to the frozen baseline.
+    """
     x, y, x_test, y_test = load_mnist1d(device)
     torch.manual_seed(seed)
     model = KuramotoClassifier(n_hidden, mask=mask).to(device)
@@ -90,6 +103,8 @@ def train_one(*, n_hidden: int, mask: Tensor | None, seed: int, lr: float, devic
     sched = make_scheduler(opt, total_steps=TOTAL_STEPS, warmup_fraction=WARMUP_FRACTION)
     loss_fn = nn.CrossEntropyLoss()
     gen = torch.Generator(device=device).manual_seed(seed)
+    rewirer = None if physarum is None else PhysarumRewirer(model, TOTAL_STEPS, physarum)
+    flow_gen = torch.Generator(device=device).manual_seed(20_000 + seed)  # own RNG stream
 
     curve = []
     start = time.perf_counter()
@@ -102,10 +117,13 @@ def train_one(*, n_hidden: int, mask: Tensor | None, seed: int, lr: float, devic
             nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP_NORM)
             opt.step()
             sched.step()
+            if rewirer is not None and rewirer.due(step):
+                rewirer.rewire(x[idx], flow_gen)
             if step % EVAL_EVERY == 0:
                 curve.append(accuracy(model, x_test, y_test))
     seconds = time.perf_counter() - start
     return {
+        **({} if rewirer is None else rewirer.summary()),
         "acc_final": curve[-1],
         "acc_best": max(curve),
         "train_acc": accuracy(model, x, y),
@@ -133,7 +151,9 @@ def main() -> None:
     """CLI entry point."""
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     p.add_argument("--hidden", nargs="+", type=int, default=[8, 512])
-    p.add_argument("--masks", nargs="+", default=["dense"], choices=["dense", "random", "modular"])
+    p.add_argument(
+        "--masks", nargs="+", default=["dense"], choices=["dense", "random", "modular", "flow"]
+    )
     p.add_argument("--sparsity", nargs="+", type=float, default=[0.5, 0.875])
     p.add_argument("--modules", nargs="+", type=int, default=[4, 16])
     p.add_argument("--seeds", nargs="+", type=int, default=[0])
@@ -143,12 +163,20 @@ def main() -> None:
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    levels = {"dense": [0.0], "random": args.sparsity, "modular": args.modules}
+    levels = {
+        "dense": [0.0],
+        "random": args.sparsity,
+        "flow": args.sparsity,
+        "modular": args.modules,
+    }
     for n_hidden, kind in itertools.product(args.hidden, args.masks):
         for level, seed, lr in itertools.product(levels[kind], args.seeds, args.lrs):
             mask = build_mask(kind, n_hidden, level, seed)
             record = {"mask": kind, "level": level, "n_hidden": n_hidden, "seed": seed, "lr": lr}
-            record |= train_one(n_hidden=n_hidden, mask=mask, seed=seed, lr=lr, device=device)
+            physarum = PhysarumConfig() if kind == "flow" else None
+            record |= train_one(
+                n_hidden=n_hidden, mask=mask, seed=seed, lr=lr, device=device, physarum=physarum
+            )
             print(json.dumps(record), flush=True)
             with args.output.open("a") as f:
                 f.write(json.dumps(record) + "\n")

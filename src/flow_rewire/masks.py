@@ -18,8 +18,13 @@ def topk_mask(score: Tensor, sparsity: float) -> Tensor:
     if not 0.0 <= sparsity < 1.0:
         raise ValueError(f"sparsity must be in [0, 1), got {sparsity}.")
     n = score.shape[0]
+    return topk_mask_count(score, round((1.0 - sparsity) * n * (n - 1)))
+
+
+def topk_mask_count(score: Tensor, num_keep: int) -> Tensor:
+    """Binary mask keeping exactly ``num_keep`` highest-scoring off-diagonal edges."""
+    n = score.shape[0]
     off_diag = ~torch.eye(n, dtype=torch.bool, device=score.device)
-    num_keep = round((1.0 - sparsity) * n * (n - 1))
     values = score.masked_fill(~off_diag, float("-inf")).flatten()
     keep = torch.zeros_like(values, dtype=torch.bool)
     keep[torch.topk(values, num_keep).indices] = True
