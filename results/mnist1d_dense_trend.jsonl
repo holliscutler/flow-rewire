@@ -1,0 +1,6 @@
+{"mask": "dense", "level": 0.0, "n_hidden": 8, "seed": 0, "lr": 0.001, "acc_final": 0.5290000438690186, "acc_best": 0.5290000438690186, "train_acc": 0.5992500185966492, "n_oscillators": 88, "edges": 7656, "seconds": 85.7}
+{"mask": "dense", "level": 0.0, "n_hidden": 8, "seed": 0, "lr": 0.003, "acc_final": 0.5630000233650208, "acc_best": 0.581000030040741, "train_acc": 0.764750063419342, "n_oscillators": 88, "edges": 7656, "seconds": 84.1}
+{"mask": "dense", "level": 0.0, "n_hidden": 8, "seed": 0, "lr": 0.01, "acc_final": 0.6210000514984131, "acc_best": 0.628000020980835, "train_acc": 0.9072500467300415, "n_oscillators": 88, "edges": 7656, "seconds": 83.8}
+{"mask": "dense", "level": 0.0, "n_hidden": 2048, "seed": 0, "lr": 0.001, "acc_final": 0.5250000357627869, "acc_best": 0.5260000228881836, "train_acc": 0.5917500257492065, "n_oscillators": 2128, "edges": 4526256, "seconds": 158.7}
+{"mask": "dense", "level": 0.0, "n_hidden": 2048, "seed": 0, "lr": 0.003, "acc_final": 0.5120000243186951, "acc_best": 0.5200000405311584, "train_acc": 0.5915000438690186, "n_oscillators": 2128, "edges": 4526256, "seconds": 159.9}
+{"mask": "dense", "level": 0.0, "n_hidden": 2048, "seed": 0, "lr": 0.01, "acc_final": 0.10600000619888306, "acc_best": 0.30900001525878906, "train_acc": 0.10475000739097595, "n_oscillators": 2128, "edges": 4526256, "seconds": 160.4}

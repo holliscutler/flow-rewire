@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: flow-rewire
+Version: 0.1.0
+Summary: Physarum flow-based rewiring of Kuramoto oscillator couplings (built on Un-0).
+Requires-Python: <3.14,>=3.11
+Requires-Dist: un0
+Requires-Dist: torch>=2.11.0
+Requires-Dist: torchvision>=0.26.0
+Requires-Dist: numpy>=1.24.0
+Requires-Dist: mnist1d>=0.0.2.post1

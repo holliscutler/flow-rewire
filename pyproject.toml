@@ -1,0 +1,49 @@
+[project]
+name = "flow-rewire"
+version = "0.1.0"
+description = "Physarum flow-based rewiring of Kuramoto oscillator couplings (built on Un-0)."
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "un0",
+    "torch>=2.11.0",
+    "torchvision>=0.26.0",
+    "numpy>=1.24.0",
+    "mnist1d>=0.0.2.post1",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.0.0", "ruff>=0.14.5"]
+eval = ["clean-fid>=0.1.35"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# Un-0 pinned to the exact upstream commit used for all reported numbers.
+[tool.uv.sources]
+un0 = { git = "https://github.com/unconv-ai/Un-0", rev = "75243cab846c092527734925c2433b556f5e5ee7" }
+torch = [{ index = "pytorch-cu128", marker = "sys_platform != 'darwin'" }]
+torchvision = [{ index = "pytorch-cu128", marker = "sys_platform != 'darwin'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "D"]
+ignore = ["D203", "D213", "N806", "N803"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-q"]

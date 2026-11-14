@@ -1,0 +1,1 @@
+{"pretrained": "cifar10/n1024", "method": "dense", "sparsity": 0.0, "fid": 11.145191468780354, "num_samples": 50000, "flow_samples": 256, "seed": 42, "prune_seconds": 0.0, "total_seconds": 237.32}

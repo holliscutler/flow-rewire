@@ -1,0 +1,7 @@
+{"pretrained": "cifar10/n1024", "method": "dense", "sparsity": 0.0, "fid": 12.822159668017889, "order_parameter_T": 0.03685779124498367, "num_samples": 10000, "seed": 42, "seconds": 74.5}
+{"pretrained": "cifar10/n1024", "method": "random", "sparsity": 0.9, "fid": 24.19507787728793, "order_parameter_T": 0.031657181680202484, "num_samples": 10000, "seed": 42, "seconds": 66.0}
+{"pretrained": "cifar10/n1024", "method": "magnitude", "sparsity": 0.9, "fid": 22.83974128806193, "order_parameter_T": 0.0332772471010685, "num_samples": 10000, "seed": 42, "seconds": 73.0}
+{"pretrained": "cifar10/n1024", "method": "flow", "sparsity": 0.9, "fid": 22.218938867161455, "order_parameter_T": 0.03436403349041939, "num_samples": 10000, "seed": 42, "seconds": 74.8}
+{"pretrained": "cifar10/n1024", "method": "random", "sparsity": 0.98, "fid": 26.06630054246989, "order_parameter_T": 0.03082544170320034, "num_samples": 10000, "seed": 42, "seconds": 65.8}
+{"pretrained": "cifar10/n1024", "method": "magnitude", "sparsity": 0.98, "fid": 24.630045361073996, "order_parameter_T": 0.02911733090877533, "num_samples": 10000, "seed": 42, "seconds": 66.9}
+{"pretrained": "cifar10/n1024", "method": "flow", "sparsity": 0.98, "fid": 24.264892313852556, "order_parameter_T": 0.02977047860622406, "num_samples": 10000, "seed": 42, "seconds": 73.0}
