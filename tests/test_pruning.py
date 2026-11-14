@@ -49,3 +49,25 @@ def test_flow_prunes_edges_between_locked_oscillators_first():
     )
     pruner.prune(3, torch.zeros(4, 40))
     assert not model.mask[0, 1] and not model.mask[1, 0]
+
+
+def test_default_trajectory_unchanged_by_shared_noise_option():
+    torch.manual_seed(0)
+    model = KuramotoClassifier(8)
+    x = torch.randn(4, 40)
+    a = model.trajectory(x, torch.Generator().manual_seed(3))[-1]
+    b = model.trajectory(x, torch.Generator().manual_seed(3), shared_noise=False)[-1]
+    torch.testing.assert_close(a, b)
+    shared = model.initial_state(x, torch.Generator().manual_seed(3), shared_noise=True)
+    assert (shared[:, 40:] == shared[:1, 40:]).all()  # non-input phases identical
+
+
+def test_perturbation_score_prunes_and_reaches_final_edges():
+    torch.manual_seed(0)
+    model = KuramotoClassifier(24)
+    pruner = GradualPruner(
+        model, final_edges=500, total_steps=1000, config=PruneConfig(score="perturbation")
+    )
+    for step in (250, 500, 750):
+        pruner.prune(step, torch.randn(8, 40))
+    assert model.num_edges == 500

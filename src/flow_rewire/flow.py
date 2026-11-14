@@ -52,6 +52,34 @@ def abs_edge_flow(theta: Tensor, coupling: Tensor, chunk: int = 32) -> Tensor:
     return out
 
 
+def abs_perturbation_flow(theta: Tensor, coupling: Tensor, chunk: int = 32) -> Tensor:
+    """Batch-summed perturbation flow  sum_b |C_ij (dtheta_bj - dtheta_bi)|.
+
+    Linearising Kuramoto dynamics around the batch-mean phases theta_bar gives
+        d(dtheta_i)/dt = sum_j C_ij (dtheta_j - dtheta_i),
+        C_ij = K_ij cos(theta_bar_j - theta_bar_i),
+    a physarum/Kirchhoff flow network with conductance C and pressure dtheta. Here
+    dtheta_b = wrap(theta_b - theta_bar) is sample b's deviation from the batch mean.
+
+    Args:
+        theta: Phases, shape ``(batch, n)``.
+        coupling: Effective coupling, shape ``(n, n)``; row i receives from column j.
+        chunk: Batch elements processed at once (memory is ``chunk * n * n``).
+
+    Returns:
+        Tensor of shape ``(n, n)``.
+
+    """
+    mean_phase = torch.angle(torch.exp(1j * theta.to(torch.float32)).mean(dim=0))
+    delta = torch.remainder(theta - mean_phase + torch.pi, 2.0 * torch.pi) - torch.pi
+    conductance = (coupling * torch.cos(mean_phase[None, :] - mean_phase[:, None])).abs()
+    out = torch.zeros_like(coupling)
+    for start in range(0, theta.shape[0], chunk):
+        d = delta[start : start + chunk]
+        out += (d.unsqueeze(1) - d.unsqueeze(2)).abs().sum(dim=0)  # [i, j] = |dth_j - dth_i|
+    return out * conductance
+
+
 @dataclass
 class FlowStats:
     """Trajectory-averaged statistics of one flow measurement."""

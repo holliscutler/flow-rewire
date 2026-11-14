@@ -39,7 +39,11 @@ from flow_rewire.mnist1d_model import N_IN, N_OUT, KuramotoClassifier
 from flow_rewire.physarum import PhysarumConfig, PhysarumRewirer
 from flow_rewire.pruning import GradualPruner, PruneConfig
 
-PRUNE_KINDS = {"flow_prune": "flow", "magnitude_prune": "magnitude"}
+PRUNE_KINDS = {
+    "flow_prune": "flow",
+    "perturbation_prune": "perturbation",
+    "magnitude_prune": "magnitude",
+}
 
 BATCH_SIZE = 100  # MNIST1D reference
 TOTAL_STEPS = 8000  # MNIST1D reference

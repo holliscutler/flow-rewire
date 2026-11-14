@@ -11,6 +11,12 @@ Scores:
     measured on the current (pruned) dynamics, so flow re-routed through surviving edges
     after each prune is reflected in the next measurement. Edges between phase-locked
     oscillators (delta theta ~ 0 or pi) carry no flow and are pruned first.
+  * ``perturbation``: the same conductivity rule driven by perturbation flow
+        Q_ij = < |K_ij cos(theta_bar_j - theta_bar_i) (dtheta_j - dtheta_i)| >,
+    the exact physarum form of linearised Kuramoto dynamics (see flow.abs_perturbation_flow).
+    Measured with non-input phases shared across the batch, so dtheta is input-driven:
+    inputs act as sources and perturbations propagate along edges. Phase-locked edges
+    (cos ~ 1) have maximal conductance and are kept, unlike ``flow``.
   * ``magnitude``: |K_ij| (gradual magnitude pruning; the control for the |K| factor in Q).
 """
 
@@ -21,11 +27,12 @@ from dataclasses import dataclass
 import torch
 from torch import Tensor
 
-from flow_rewire.flow import abs_edge_flow
+from flow_rewire.flow import abs_edge_flow, abs_perturbation_flow
 from flow_rewire.masks import topk_mask_count
 from flow_rewire.mnist1d_model import KuramotoClassifier
 
-SCORES = ("flow", "magnitude")
+SCORES = ("flow", "perturbation", "magnitude")
+FLOW_FNS = {"flow": abs_edge_flow, "perturbation": abs_perturbation_flow}
 
 
 @dataclass(frozen=True)
@@ -50,7 +57,7 @@ def cubic_edge_schedule(step: int, *, start_edges: int, final_edges: int, t0: in
 
 
 class GradualPruner:
-    """Permanently prune ``model.mask`` to ``final_edges`` by flow or magnitude."""
+    """Permanently prune ``model.mask`` to ``final_edges`` by the configured score."""
 
     def __init__(
         self,
@@ -77,16 +84,18 @@ class GradualPruner:
 
     @torch.no_grad()
     def flow(self, x: Tensor, generator: torch.Generator | None = None) -> Tensor:
-        """Mean |K_ij sin(theta_j - theta_i)| over batch and trajectory on active edges."""
+        """Batch- and trajectory-mean flow (``config.score``) on active edges."""
         coupling = self.model.coupling
-        states = self.model.trajectory(x, generator)
-        total = sum(abs_edge_flow(theta, coupling, chunk=self.config.chunk) for theta in states)
+        shared = self.config.score == "perturbation"  # input-driven variation only
+        states = self.model.trajectory(x, generator, shared_noise=shared)
+        flow_fn = FLOW_FNS[self.config.score]
+        total = sum(flow_fn(theta, coupling, chunk=self.config.chunk) for theta in states)
         return total / (x.shape[0] * len(states))
 
     @torch.no_grad()
     def prune(self, step: int, x: Tensor, generator: torch.Generator | None = None) -> int:
         """Run one pruning event after ``step``; return the new active edge count."""
-        if self.config.score == "flow":
+        if self.config.score in FLOW_FNS:
             self.D.mul_(1.0 - self.config.gamma).add_(self.flow(x, generator))
             score = self.D
         else:

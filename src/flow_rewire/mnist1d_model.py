@@ -65,16 +65,33 @@ class KuramotoClassifier(nn.Module):
         """Number of active couplings."""
         return int(self.mask.sum())
 
-    def initial_state(self, x: Tensor, generator: torch.Generator | None = None) -> Tensor:
-        """Phases at t = 0: encoded inputs; all others uniform on [-pi, pi) (Un-0 prior)."""
-        noise = torch.rand(x.shape[0], self.n, device=x.device, generator=generator)
-        theta = noise * (2.0 * torch.pi) - torch.pi
+    def initial_state(
+        self,
+        x: Tensor,
+        generator: torch.Generator | None = None,
+        *,
+        shared_noise: bool = False,
+    ) -> Tensor:
+        """Phases at t = 0: encoded inputs; all others uniform on [-pi, pi) (Un-0 prior).
+
+        With ``shared_noise`` every sample gets the same non-input phases, so differences
+        across the batch are driven by the data alone (used for flow measurement only).
+        """
+        rows = 1 if shared_noise else x.shape[0]
+        noise = torch.rand(rows, self.n, device=x.device, generator=generator)
+        theta = (noise * (2.0 * torch.pi) - torch.pi).expand(x.shape[0], -1)
         return torch.cat([self.encoder(x), theta[:, N_IN:]], dim=1)
 
-    def trajectory(self, x: Tensor, generator: torch.Generator | None = None) -> list[Tensor]:
+    def trajectory(
+        self,
+        x: Tensor,
+        generator: torch.Generator | None = None,
+        *,
+        shared_noise: bool = False,
+    ) -> list[Tensor]:
         """All phase states ``theta(t_k)``, k = 0..num_steps (Euler)."""
         K = self.coupling
-        theta = self.initial_state(x, generator)
+        theta = self.initial_state(x, generator, shared_noise=shared_noise)
         states = [theta]
         for _ in range(self.num_steps):
             theta = theta + self.dt * _kuramoto_velocity(theta, self.omega, K)

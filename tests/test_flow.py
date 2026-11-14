@@ -80,3 +80,22 @@ def test_apply_mask_zeroes_effective_coupling(tiny_model):
     mask = topk_mask(torch.rand(64, 64), sparsity=0.9)
     apply_mask(tiny_model, mask)
     assert (effective_coupling(tiny_model.dynamics)[~mask] == 0).all()
+
+
+def test_perturbation_flow_matches_bruteforce():
+    from flow_rewire.flow import abs_perturbation_flow
+
+    torch.manual_seed(0)
+    theta, K = torch.randn(6, 5) * 0.3, torch.randn(5, 5)
+    mean = torch.angle(torch.exp(1j * theta).mean(0))
+    d = torch.remainder(theta - mean + math.pi, 2 * math.pi) - math.pi
+    cond = (K * torch.cos(mean[None, :] - mean[:, None])).abs()
+    expected = sum(cond * (d[b][None, :] - d[b][:, None]).abs() for b in range(6))
+    torch.testing.assert_close(abs_perturbation_flow(theta, K, chunk=4), expected)
+
+
+def test_perturbation_flow_is_zero_without_input_variation():
+    from flow_rewire.flow import abs_perturbation_flow
+
+    theta = torch.randn(1, 6).expand(8, 6)  # every sample identical
+    assert abs_perturbation_flow(theta, torch.randn(6, 6)).abs().max() < 1e-5

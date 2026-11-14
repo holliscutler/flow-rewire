@@ -1,0 +1,27 @@
+{
+  "config": {
+    "hidden": 2048,
+    "steps": 2000,
+    "lr": 0.001,
+    "seed": 0,
+    "keep": 0.0625,
+    "output": "results/diagnostics/scores.json"
+  },
+  "spearman": {
+    "magnitude~force_flow": 0.9980645179748535,
+    "magnitude~perturbation_flow": 0.8150300979614258,
+    "force_flow~perturbation_flow": 0.8130151629447937
+  },
+  "kept_overlap": {
+    "magnitude&force_flow": 0.9243524670600891,
+    "magnitude&perturbation_flow": 0.49514830112457275,
+    "force_flow&perturbation_flow": 0.49386510252952576
+  },
+  "in_phase_edges_fraction": 0.06603117287158966,
+  "in_phase_edges_kept_fraction": {
+    "magnitude": 0.06034984812140465,
+    "force_flow": 0.05841926857829094,
+    "perturbation_flow": 0.0807865560054779
+  },
+  "all_edges_kept_fraction": 0.0625
+}
