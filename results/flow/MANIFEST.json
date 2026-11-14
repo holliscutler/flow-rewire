@@ -1,0 +1,11 @@
+{
+  "commit": "bf8c225ae236a3a3e4c7a5288be58aaee61fc47c",
+  "date": "2026-11-13",
+  "method": "physarum flow rewiring (src/flow_rewire/physarum.py), PhysarumConfig defaults: interval 250, stop 0.75, gamma 0.5",
+  "protocol": "identical to results/baseline: LR selected on seed 0 from {1e-3, 3e-3, 1e-2}, then seeds 1-4 at the selected LR",
+  "commands": [
+    "python -m flow_rewire.mnist1d_train --hidden 2048 --masks flow --sparsity 0.9375 --seeds 0 --lrs 1e-3 3e-3 1e-2 --output results/flow/lr_select.jsonl",
+    "python -m flow_rewire.mnist1d_train --hidden 2048 --masks flow --sparsity 0.9375 --seeds 1 2 3 4 --lrs 1e-2 --output results/flow/mnist1d.jsonl"
+  ],
+  "selected_lr": 0.01
+}

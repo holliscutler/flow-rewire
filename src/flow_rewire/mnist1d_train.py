@@ -37,6 +37,9 @@ from flow_rewire.energy import (
 from flow_rewire.masks import modular_mask, random_mask
 from flow_rewire.mnist1d_model import N_IN, N_OUT, KuramotoClassifier
 from flow_rewire.physarum import PhysarumConfig, PhysarumRewirer
+from flow_rewire.pruning import GradualPruner, PruneConfig
+
+PRUNE_KINDS = {"flow_prune": "flow", "magnitude_prune": "magnitude"}
 
 BATCH_SIZE = 100  # MNIST1D reference
 TOTAL_STEPS = 8000  # MNIST1D reference
@@ -63,13 +66,19 @@ def load_mnist1d(device: str) -> tuple[Tensor, Tensor, Tensor, Tensor]:
 def build_mask(kind: str, n_hidden: int, level: float, seed: int) -> Tensor | None:
     """Keep-mask for one configuration; ``level`` is sparsity (random) or Z (modular)."""
     n = N_IN + n_hidden + N_OUT
-    if kind == "dense":
+    if kind == "dense" or kind in PRUNE_KINDS:  # pruning runs start dense
         return None
     if kind in ("random", "flow"):  # flow starts from the identical random mask
         return random_mask(n, level, generator=torch.Generator().manual_seed(10_000 + seed))
     if kind == "modular":
         return modular_mask([N_IN, n_hidden, N_OUT], int(level))
     raise ValueError(f"Unknown mask kind {kind!r}.")
+
+
+def matched_edge_count(n_hidden: int, sparsity: float, seed: int) -> int:
+    """Active (off-diagonal) edges of this seed's random-baseline mask."""
+    mask = build_mask("random", n_hidden, sparsity, seed)
+    return int((mask & ~torch.eye(mask.shape[0], dtype=torch.bool)).sum())
 
 
 @torch.no_grad()
@@ -90,11 +99,15 @@ def train_one(
     lr: float,
     device: str,
     physarum: PhysarumConfig | None = None,
+    pruning: PruneConfig | None = None,
+    final_edges: int | None = None,
 ) -> dict:
     """Train one classifier and return its accuracy curve summary.
 
-    With ``physarum`` set, the mask is rewired by flow during training (see physarum.py);
-    otherwise the mask is static and the loop is identical to the frozen baseline.
+    With ``physarum`` set, a sparse mask is rewired by flow (physarum.py, v1). With
+    ``pruning`` set, training starts from ``mask`` (normally dense) and is pruned to
+    ``final_edges`` (pruning.py). Otherwise the mask is static and the loop is
+    identical to the frozen baseline.
     """
     x, y, x_test, y_test = load_mnist1d(device)
     torch.manual_seed(seed)
@@ -104,13 +117,21 @@ def train_one(
     loss_fn = nn.CrossEntropyLoss()
     gen = torch.Generator(device=device).manual_seed(seed)
     rewirer = None if physarum is None else PhysarumRewirer(model, TOTAL_STEPS, physarum)
+    pruner = (
+        None
+        if pruning is None
+        else GradualPruner(model, final_edges=final_edges, total_steps=TOTAL_STEPS, config=pruning)
+    )
     flow_gen = torch.Generator(device=device).manual_seed(20_000 + seed)  # own RNG stream
 
+    train_edge_steps = 0  # sum over training steps of active edges (training coupling cost)
+    active_edges = model.num_edges  # cached; changes only at rewire/prune events
     curve = []
     start = time.perf_counter()
     with GpuEnergyMeter() as train_meter:  # whole run, including periodic evaluation
         for step in range(1, TOTAL_STEPS + 1):
             idx = torch.randint(0, x.shape[0], (BATCH_SIZE,), device=device, generator=gen)
+            train_edge_steps += active_edges
             loss = loss_fn(model(x[idx], gen), y[idx])
             opt.zero_grad(set_to_none=True)
             loss.backward()
@@ -119,11 +140,20 @@ def train_one(
             sched.step()
             if rewirer is not None and rewirer.due(step):
                 rewirer.rewire(x[idx], flow_gen)
+                active_edges = model.num_edges
+            if pruner is not None and pruner.due(step):
+                pruner.prune(step, x[idx], flow_gen)
+                active_edges = model.num_edges
             if step % EVAL_EVERY == 0:
                 curve.append(accuracy(model, x_test, y_test))
     seconds = time.perf_counter() - start
     return {
         **({} if rewirer is None else rewirer.summary()),
+        **({} if pruner is None else pruner.summary()),
+        "train_coupling_ops_per_sample": coupling_ops_per_inference(
+            train_edge_steps, model.num_steps
+        )
+        / TOTAL_STEPS,
         "acc_final": curve[-1],
         "acc_best": max(curve),
         "train_acc": accuracy(model, x, y),
@@ -152,7 +182,10 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     p.add_argument("--hidden", nargs="+", type=int, default=[8, 512])
     p.add_argument(
-        "--masks", nargs="+", default=["dense"], choices=["dense", "random", "modular", "flow"]
+        "--masks",
+        nargs="+",
+        default=["dense"],
+        choices=["dense", "random", "modular", "flow", *PRUNE_KINDS],
     )
     p.add_argument("--sparsity", nargs="+", type=float, default=[0.5, 0.875])
     p.add_argument("--modules", nargs="+", type=int, default=[4, 16])
@@ -168,14 +201,25 @@ def main() -> None:
         "random": args.sparsity,
         "flow": args.sparsity,
         "modular": args.modules,
+        **dict.fromkeys(PRUNE_KINDS, args.sparsity),
     }
     for n_hidden, kind in itertools.product(args.hidden, args.masks):
         for level, seed, lr in itertools.product(levels[kind], args.seeds, args.lrs):
             mask = build_mask(kind, n_hidden, level, seed)
             record = {"mask": kind, "level": level, "n_hidden": n_hidden, "seed": seed, "lr": lr}
-            physarum = PhysarumConfig() if kind == "flow" else None
+            pruning, final_edges = None, None
+            if kind in PRUNE_KINDS:  # final edge count matched to this seed's random baseline
+                pruning = PruneConfig(score=PRUNE_KINDS[kind])
+                final_edges = matched_edge_count(n_hidden, level, seed)
             record |= train_one(
-                n_hidden=n_hidden, mask=mask, seed=seed, lr=lr, device=device, physarum=physarum
+                n_hidden=n_hidden,
+                mask=mask,
+                seed=seed,
+                lr=lr,
+                device=device,
+                physarum=PhysarumConfig() if kind == "flow" else None,
+                pruning=pruning,
+                final_edges=final_edges,
             )
             print(json.dumps(record), flush=True)
             with args.output.open("a") as f:
