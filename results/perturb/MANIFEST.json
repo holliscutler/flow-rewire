@@ -1,0 +1,7 @@
+{
+  "commit": "737195054839ae279b35fdd3c622379571d46a83",
+  "date": "2026-11-14",
+  "method": "gradual pruning from dense by perturbation flow (src/flow_rewire/pruning.py, score=perturbation; flow.abs_perturbation_flow), PruneConfig defaults: interval 250, stop 0.75, gamma 0.5, cubic schedule",
+  "protocol": "identical to results/baseline and results/prune: LR selected on seed 0 from {1e-3, 3e-3, 1e-2} by final accuracy, then seeds 1-4 at the selected LR; final edges matched per seed to the random baseline",
+  "runner": "results/perturb/run.sh"
+}
