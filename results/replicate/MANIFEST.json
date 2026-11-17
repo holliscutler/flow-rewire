@@ -2,6 +2,17 @@
   "commit": "2aa4b10a397b2909d247c78b3bfbe89f189a8633",
   "date": "2026-11-16",
   "purpose": "independent replication on unseen seeds 5-9; LRs fixed from the seed-0 selections in results/baseline, results/prune, results/perturb",
-  "lrs": {"perturbation_prune": 3e-3, "magnitude_prune": 3e-3, "random": 1e-2, "dense": 1e-3},
-  "runner": "results/replicate/run.sh"
+  "lrs": {
+    "perturbation_prune": 0.003,
+    "magnitude_prune": 0.003,
+    "random": 0.01,
+    "dense": 0.001,
+    "modular": 0.01
+  },
+  "runner": "results/replicate/run.sh",
+  "modular_addendum": {
+    "commit": "7e3f81a7e68bfbfd8632e64274d5f9936e7b0dda",
+    "date": "2026-11-16",
+    "note": "modular Z=16 seeds 5-9 added after the main replication; training code unchanged"
+  }
 }

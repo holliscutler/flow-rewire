@@ -28,8 +28,7 @@ N_HIDDEN = 2048
 
 # (record mask, display label, group); display order top to bottom.
 METHODS = (
-    ("perturbation_prune", "Perturbation flow (ours)", "ours"),
-    ("flow_prune", "Force flow", "prune"),
+    ("perturbation_prune", "Flow", "ours"),
     ("magnitude_prune", "Magnitude", "prune"),
     ("random", "Random mask", "baseline"),
     ("modular", "Modular mask", "baseline"),
@@ -87,6 +86,11 @@ def paired(data: dict, a: str, b: str) -> dict:
     }
 
 
+def fmt_p(p: float) -> str:
+    """P-value label."""
+    return "p < 0.001" if p < 0.001 else f"p = {p:.3f}"
+
+
 def style(ax: plt.Axes, grid_axis: str = "x") -> None:
     """Recessive axes: light grid, no top/right spines."""
     for side in ("top", "right"):
@@ -138,7 +142,7 @@ def fig_accuracy(data: dict, out: Path) -> None:
 
 def fig_paired(data: dict, out: Path) -> list[tuple[str, dict]]:
     """Per-seed paired differences of perturbation-flow pruning against each alternative."""
-    others = [m for m in ("random", "magnitude_prune", "flow_prune", "dense") if m in data]
+    others = [m for m in ("random", "magnitude_prune", "dense") if m in data]
     results = [(m, paired(data, "perturbation_prune", m)) for m in others]
     right = max(max(*r["diffs"], r["mean"] + r["ci"]) for _, r in results) + 0.6
     fig, ax = plt.subplots(figsize=(WIDTH, 0.5 * len(results) + 1.3), dpi=200)
@@ -154,7 +158,7 @@ def fig_paired(data: dict, out: Path) -> list[tuple[str, dict]]:
         ax.text(
             right,
             y,
-            f"{res['mean']:+.1f} pts   {res['wins']}/{n} seeds   p = {res['p']:.3f}",
+            f"{res['mean']:+.2f} pts   {res['wins']}/{n} seeds   {fmt_p(res['p'])}",
             va="center",
             fontsize=8.5,
             color=INK,
@@ -167,7 +171,7 @@ def fig_paired(data: dict, out: Path) -> list[tuple[str, dict]]:
     style(ax)
     title(
         ax,
-        "Perturbation-flow pruning, paired by seed",
+        "Flow pruning, paired by seed",
         "Dots: per-seed difference; bar: mean ± 95% CI; two-sided paired t-test",
     )
     fig.tight_layout()

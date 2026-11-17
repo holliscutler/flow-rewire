@@ -15,16 +15,17 @@ Linearized Kuramoto dynamics is an exact physarum flow network:
 Starting dense, edges are pruned by the physarum conductivity rule driven by this
 perturbation flow. On MNIST1D at N = 2128, all sparse networks keep 6.25% of the edges.
 
-| method | test acc. (5 seeds) |
-| --- | --- |
-| **Perturbation-flow pruning (this work)** | **0.597 ± 0.015** |
-| Gradual magnitude pruning | 0.578 ± 0.017 |
-| Random mask ("Less is More") | 0.571 ± 0.017 |
-| Dense | 0.537 ± 0.018 |
+| method | test acc. (10 seeds) | paired gain of this work |
+| --- | --- | --- |
+| **Perturbation-flow pruning (this work)** | **0.592 ± 0.018** | |
+| Random mask ("Less is More") | 0.573 ± 0.016 | +1.9 points, 8/10 seeds, p = 0.039 |
+| Gradual magnitude pruning | 0.570 ± 0.027 | +2.3 points, 9/10 seeds, p < 0.001 |
+| Dense | 0.528 ± 0.021 | +6.4 points, 10/10 seeds |
 
-- **vs. the random mask:** +2.7 points paired by seed, better on 5/5 seeds, p = 0.016.
-- **vs. dense:** 16× fewer coupling operations per inference.
-- **Replication:** fresh seeds 5–9 are in progress.
+- **Cost:** the pruned network uses 16× fewer coupling operations per inference than dense.
+- **Replication:** seeds 5–9 were run after the method and all settings were frozen.
+  They replicate the gain over magnitude pruning (5/5 seeds) but not, on their own, the
+  gain over the random mask (3/5 seeds).
 
 ![Test accuracy per method](docs/figures/accuracy.png)
 
@@ -46,7 +47,7 @@ The `results/` runs:
 - `baseline`: dense, random and modular masks (frozen)
 - `prune`: force-flow vs. magnitude pruning
 - `perturb`: perturbation-flow pruning
-- `replicate`: seeds 5–9
+- `replicate`: frozen replication, seeds 5–9
 
 Un-0 is pinned to upstream commit `75243ca` in `pyproject.toml`.
 

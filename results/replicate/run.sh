@@ -8,3 +8,4 @@ $T --masks perturbation_prune --lrs 3e-3 $O
 $T --masks random --lrs 1e-2 $O
 $T --masks magnitude_prune --lrs 3e-3 $O
 $T --masks dense --lrs 1e-3 $O
+$T --masks modular --modules 16 --lrs 1e-2 $O

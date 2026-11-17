@@ -1,11 +1,16 @@
 README.md
 pyproject.toml
 src/flow_rewire/__init__.py
+src/flow_rewire/diagnose_scores.py
+src/flow_rewire/energy.py
 src/flow_rewire/evaluate.py
+src/flow_rewire/figures.py
 src/flow_rewire/flow.py
 src/flow_rewire/masks.py
 src/flow_rewire/mnist1d_model.py
 src/flow_rewire/mnist1d_train.py
+src/flow_rewire/physarum.py
+src/flow_rewire/pruning.py
 src/flow_rewire/summarize.py
 src/flow_rewire/sweep.py
 src/flow_rewire/train_masked.py
@@ -14,4 +19,7 @@ src/flow_rewire.egg-info/SOURCES.txt
 src/flow_rewire.egg-info/dependency_links.txt
 src/flow_rewire.egg-info/requires.txt
 src/flow_rewire.egg-info/top_level.txt
+tests/test_energy.py
 tests/test_flow.py
+tests/test_physarum.py
+tests/test_pruning.py
