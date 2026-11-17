@@ -9,7 +9,7 @@ or modular) recover it. Those masks are chosen without reference to the dynamics
 This project chooses the mask *from* the dynamics. Linearizing Kuramoto dynamics around
 the mean trajectory gives an exact physarum flow network: couplings become conductances
 and phase perturbations become pressures. Starting dense, edges are pruned gradually by
-the physarum conductivity rule dD/dt = |Q| − γD (Tero et al., 2007; Cutler & Li,
+the physarum conductivity rule $dD/dt = \lvert Q \rvert - \gamma D$ (Tero et al., 2007; Cutler & Li,
 ALIFE 2026).
 
 The test is MNIST1D at N = 2128 oscillators, with every sparse network at the same edge
@@ -31,27 +31,33 @@ mask ([Section 4](#4-replication)).
 
 Un-0 integrates
 
-  θ̇ᵢ = ωᵢ + Σⱼ Kᵢⱼ sin(θⱼ − θᵢ).
+$$
+\dot\theta_i = \omega_i + \sum_j K_{ij} \sin(\theta_j - \theta_i).
+$$
 
-Let θ̄ be the batch-mean (circular) phase trajectory and δθ = θ − θ̄ one input's
-deviation from it. To first order,
+Let $\bar\theta$ be the batch-mean (circular) phase trajectory and
+$\delta\theta = \theta - \bar\theta$ one input's deviation from it. To first order,
 
-  δθ̇ᵢ = Σⱼ Cᵢⱼ (δθⱼ − δθᵢ),  with Cᵢⱼ = Kᵢⱼ cos(θ̄ⱼ − θ̄ᵢ).
+$$
+\delta\dot\theta_i = \sum_j C_{ij} \left(\delta\theta_j - \delta\theta_i\right),
+\qquad C_{ij} = K_{ij} \cos(\bar\theta_j - \bar\theta_i).
+$$
 
 This is Kirchhoff flow on a graph, which is the physarum model term for term:
 
 | Physarum (Tero et al., 2007) | Linearized Kuramoto |
 | --- | --- |
-| conductivity Dᵢⱼ | Cᵢⱼ = Kᵢⱼ cos(θ̄ⱼ − θ̄ᵢ) |
-| pressure pᵢ | δθᵢ, the input-driven phase perturbation |
-| flux Qᵢⱼ = Dᵢⱼ (pⱼ − pᵢ) | Qᵢⱼ = Cᵢⱼ (δθⱼ − δθᵢ) |
+| conductivity $D_{ij}$ | $C_{ij} = K_{ij} \cos(\bar\theta_j - \bar\theta_i)$ |
+| pressure $p_i$ | $\delta\theta_i$, the input-driven phase perturbation |
+| flux $Q_{ij} = D_{ij} (p_j - p_i)$ | $Q_{ij} = C_{ij} (\delta\theta_j - \delta\theta_i)$ |
 | sources | input oscillators (set by the encoder) |
 
-An edge's **perturbation flow** |Qᵢⱼ| measures how much input-dependent signal it
-carries. That is the quantity a classifier needs to route from input to readout.
+An edge's **perturbation flow** $\lvert Q_{ij} \rvert$ measures how much input-dependent
+signal it carries. That is the quantity a classifier needs to route from input to readout.
 
-A first, naive mapping used the nonlinear coupling force, |Kᵢⱼ sin(θⱼ − θᵢ)|, as the flow.
-It ranks edges almost exactly like |Kᵢⱼ| ([Section 5](#5-why-the-perturbation-form-matters))
+A first, naive mapping used the nonlinear coupling force,
+$\lvert K_{ij} \sin(\theta_j - \theta_i) \rvert$, as the flow. It ranks edges almost exactly
+like $\lvert K_{ij} \rvert$ ([Section 5](#5-why-the-perturbation-form-matters))
 and is kept as an ablation.
 
 ## 2. Method
@@ -64,10 +70,11 @@ mask.
   (24 events). The active edge count follows the cubic schedule of Zhu & Gupta (2017).
 - **Measurement.** At each event, one training batch of 100 is integrated with the current
   (pruned) couplings, and non-input initial phases are shared across the batch. As a
-  result, δθ reflects the inputs only. |Qᵢⱼ| is averaged over the batch and the 11 time
-  points (`flow.abs_perturbation_flow`).
-- **Conductivity.** Dᵢⱼ ← (1 − γ) Dᵢⱼ + Qᵢⱼ with γ = 0.5, the discrete physarum rule.
-  At each event, the lowest-D active edges are removed.
+  result, $\delta\theta$ reflects the inputs only. $\lvert Q_{ij} \rvert$ is averaged over
+  the batch and the 11 time points (`flow.abs_perturbation_flow`).
+- **Conductivity.** $D_{ij} \leftarrow (1 - \gamma) D_{ij} + \lvert Q_{ij} \rvert$ with
+  $\gamma = 0.5$, the discrete physarum rule. At each event, the lowest-$D$ active edges
+  are removed.
 
 Configuration: `PruneConfig` defaults in `src/flow_rewire/pruning.py`. These defaults were
 set before any result and are shared by all pruning scores.
@@ -82,7 +89,7 @@ set before any result and are shared by all pruning scores.
 | Model | Un-0 Kuramoto classifier: 40 input, 2048 hidden, 40 readout oscillators (N = 2128). 10 Euler steps, T = 1, sin/cos readout. |
 | Training | Un-0 optimizer: DecoupledAdamW, betas (0.9, 0.95), weight decay 1e-3, warmup then linear decay, gradient clip 1.0. MNIST1D reference loop: batch 100, 8000 steps. |
 | Learning rate | Selected on seed 0 from {1e-3, 3e-3, 1e-2}, separately for each method, then fixed for all seeds |
-| Sparsity | 93.75% (s = 1 − 2⁻⁴), 282,912 of 4.5M couplings. Modular uses Z = 16 (280,912). |
+| Sparsity | 93.75% ($s = 1 - 2^{-4}$), about 283k of 4.53M couplings (282,730–283,530, matched per seed to the random mask). Modular uses $Z = 16$ (280,912). |
 | Seeds | 0–9, paired: the same seed gives the same initialization and data order for every method |
 
 Unspecified details were inferred from Un-0 and the MNIST1D reference trainer. Each one
@@ -150,17 +157,17 @@ selected learning rate. Seeds 5–9 were then run fresh (`results/replicate/`).
 Each score was computed on the same partially trained dense model, and the top 6.25% of
 edges kept under each (`results/diagnostics/scores.json`):
 
-| | Spearman ρ with \|K\| | kept-set overlap with \|K\| | in-phase edges kept* |
+| | Spearman $\rho$ with $\lvert K \rvert$ | kept-set overlap with $\lvert K \rvert$ | in-phase edges kept* |
 | --- | --- | --- | --- |
-| Force flow ⟨\|K sin Δθ\|⟩ | 0.998 | 92% | 5.8% |
-| Perturbation flow | 0.815 | 50% | 8.1% |
+| Force flow $\langle \lvert K \sin \Delta\theta \rvert \rangle$ | 0.998 | 92% | 5.8% |
+| Perturbation flow $\langle \lvert Q \rvert \rangle$ | 0.815 | 50% | 8.1% |
 
-\*Edges with cos Δθ̄ > 0.9. Uniform keeping would retain 6.25% of them.
+\*Edges with $\cos \Delta\bar\theta > 0.9$. Uniform keeping would retain 6.25% of them.
 
-- **Force flow is magnitude pruning in disguise.** sin Δθ is roughly independent of the
-  edge, so |K| dominates the score.
+- **Force flow is magnitude pruning in disguise.** $\sin \Delta\theta$ is roughly
+  independent of the edge, so $\lvert K \rvert$ dominates the score.
 - **Perturbation flow selects a different half of the network.** It deliberately keeps
-  in-phase edges, which have high conductance cos Δθ̄ and transmit input-driven
+  in-phase edges, which have high conductance $\cos \Delta\bar\theta$ and transmit input-driven
   perturbations. The naive view would prune them as "synchronized".
 
 ## 6. Cost
