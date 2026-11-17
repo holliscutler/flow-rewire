@@ -38,7 +38,9 @@ from flow_rewire.masks import modular_mask, random_mask
 from flow_rewire.mnist1d_model import N_IN, N_OUT, KuramotoClassifier
 from flow_rewire.physarum import PhysarumConfig, PhysarumRewirer
 from flow_rewire.pruning import GradualPruner, PruneConfig
+from flow_rewire.web import hops_to_readout, web_mask, wire_length
 
+WEB_KINDS = {"web_inward": "inward", "web_twoway": "twoway"}  # web.py, 10% rewiring
 PRUNE_KINDS = {
     "flow_prune": "flow",
     "perturbation_prune": "perturbation",
@@ -76,6 +78,13 @@ def build_mask(kind: str, n_hidden: int, level: float, seed: int) -> Tensor | No
         return random_mask(n, level, generator=torch.Generator().manual_seed(10_000 + seed))
     if kind == "modular":
         return modular_mask([N_IN, n_hidden, N_OUT], int(level))
+    if kind in WEB_KINDS:  # same edge count and rewiring seed stream as the random mask
+        return web_mask(
+            n_hidden,
+            matched_edge_count(n_hidden, level, seed),
+            WEB_KINDS[kind],
+            generator=torch.Generator().manual_seed(10_000 + seed),
+        )
     raise ValueError(f"Unknown mask kind {kind!r}.")
 
 
@@ -189,7 +198,7 @@ def main() -> None:
         "--masks",
         nargs="+",
         default=["dense"],
-        choices=["dense", "random", "modular", "flow", *PRUNE_KINDS],
+        choices=["dense", "random", "modular", "flow", *PRUNE_KINDS, *WEB_KINDS],
     )
     p.add_argument("--sparsity", nargs="+", type=float, default=[0.5, 0.875])
     p.add_argument("--modules", nargs="+", type=int, default=[4, 16])
@@ -206,11 +215,18 @@ def main() -> None:
         "flow": args.sparsity,
         "modular": args.modules,
         **dict.fromkeys(PRUNE_KINDS, args.sparsity),
+        **dict.fromkeys(WEB_KINDS, args.sparsity),
     }
     for n_hidden, kind in itertools.product(args.hidden, args.masks):
         for level, seed, lr in itertools.product(levels[kind], args.seeds, args.lrs):
             mask = build_mask(kind, n_hidden, level, seed)
             record = {"mask": kind, "level": level, "n_hidden": n_hidden, "seed": seed, "lr": lr}
+            if kind in WEB_KINDS:
+                off = mask & ~torch.eye(mask.shape[0], dtype=torch.bool)
+                record |= {
+                    "hops_to_readout": hops_to_readout(off),
+                    "wire_length": wire_length(off, n_hidden),
+                }
             pruning, final_edges = None, None
             if kind in PRUNE_KINDS:  # final edge count matched to this seed's random baseline
                 pruning = PruneConfig(score=PRUNE_KINDS[kind])

@@ -103,11 +103,11 @@ N = 2128.
 | Force-flow pruning (ablation) | 5 | 0.584 ± 0.020 | 0.698 ± 0.016 | 3e-3 |
 | Random mask ("Less is More") | 10 | 0.573 ± 0.016 | 0.675 ± 0.013 | 1e-2 |
 | Gradual magnitude pruning | 10 | 0.570 ± 0.027 | 0.694 ± 0.015 | 3e-3 |
-| Modular mask ("Less is More") | 5 | 0.550 ± 0.027 | 0.617 ± 0.016 | 1e-2 |
+| Modular mask ("Less is More") | 10 | 0.547 ± 0.021 | 0.617 ± 0.013 | 1e-2 |
 | Dense | 10 | 0.528 ± 0.021 | 0.598 ± 0.009 | 1e-3 |
 
 Values are mean ± std over seeds, using final accuracy at step 8000. Force-flow pruning
-and the modular mask were not part of the replication, so they have seeds 0–4 only.
+(an ablation) was not part of the replication, so it has seeds 0–4 only.
 
 ### Paired comparison
 
@@ -117,6 +117,7 @@ and the modular mask were not part of the replication, so they have seeds 0–4 
 | --- | --- | --- | --- | --- | --- |
 | Magnitude pruning | 10 | **+2.3** | [+1.2, +3.3] | **< 0.001** | **9/10** |
 | Random mask | 10 | **+1.9** | [+0.1, +3.8] | **0.039** | **8/10** |
+| Modular mask | 10 | +4.5 | [+2.5, +6.6] | < 0.001 | 10/10 |
 | Force-flow pruning | 5 | +1.4 | [−0.9, +3.7] | 0.17 | 4/5 |
 | Dense | 10 | +6.4 | [+4.7, +8.2] | < 0.001 | 10/10 |
 
